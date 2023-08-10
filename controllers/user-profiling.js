@@ -4,18 +4,9 @@ import {
   signUpSchema,
   userSchema,
 } from "../yupSchemas/user-profiling.js";
+import user from "../models/userModel.js";
 
-const users = [
-  {
-    id: 1,
-    username: "exampleuser",
-    password: "12345678",
-    firstName: "Example",
-    lastName: "User",
-  },
-];
-
-//signin
+//signin with monngo
 export const Signin = async (req, res) => {
   const { username, password } = req.body;
 
@@ -27,18 +18,18 @@ export const Signin = async (req, res) => {
   } catch (error) {
     return res.status(400).json({ error: error.errors });
   }
-  const user = users.find((user) => user.username === username);
-  if (!user) {
+  const found = await user.findOne({ username: username }).select("+password");
+  if (!found) {
     return res.status(404).json({ error: "User not found" });
   }
-  const isPasswordValid = password === user.password;
+  const isPasswordValid = await bcrypt.compare(password, found.password);
   if (!isPasswordValid) {
     return res.status(401).json({ error: "Invalid password" });
   }
   res.json({ message: "Sign-in successful" });
 };
 
-//signup
+//signup with monngo
 export const SignUp = async (req, res) => {
   const { username, password, firstName, lastName } = req.body;
   try {
@@ -48,51 +39,78 @@ export const SignUp = async (req, res) => {
   } catch (error) {
     return res.status(400).json({ error: error.errors });
   }
-  if (users.some((user) => user.username === username)) {
+  const alreadyExists = await user.findOne({ userName: username });
+  if (alreadyExists) {
     return res.status(400).json({ error: "Username already taken" });
   }
   try {
-    // Hash the password before storing it
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Save the user in the database (replace with your database logic)
-    users.push({ username, password: hashedPassword, firstName, lastName });
+    await user.create({
+      username,
+      password: hashedPassword,
+      firstName,
+      lastName,
+    });
 
     res.json({ message: "Sign-up successful" });
   } catch (error) {
-    console.error("Error during sign-up:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Username already exists" });
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-//editprofile
+//editprofile with mongo
 export const editProfile = async (req, res) => {
-  const userId = parseInt(req.params.userId, 10);
-  const { firstName, lastName } = req.body;
+  const username = req.params.username;
   try {
-    const user = users.find((user) => user.id === userId);
-    if (!user) {
+    const userFound = await user.findOne({ username });
+    if (!userFound) {
       return res.status(404).json({ error: "User not found" });
     }
-    if (firstName || lastName) {
-      user.firstName = firstName || user.firstName;
-      user.lastName = lastName || user.lastName;
-    }
+    await user.findOneAndUpdate({ username: username }, req.body);
     res.json({ message: "Profile updated successfully" });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
-//viewUser
+//viewUser with mongo
 export const viweUser = async (req, res) => {
-  const userId = parseInt(req.params.userId, 10);
+  const username = req.params.username;
   try {
-    const user = users.find((user) => user.id === userId);
-    if (!user) {
+    const userFound = await user.findOne({ username });
+    if (!userFound) {
       return res.status(404).json({ error: "User not found" });
     }
-    res.json({ message: "User Found.", data: user });
+    res.json({ message: "User Found.", data: userFound });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+//all users with mongo
+export const viewAllUsers = async (req, res) => {
+  try {
+    const userFound = await user.find();
+    res.json({ message: "Users Found.", data: userFound });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+//delete user with mongo
+export const deleteUser = async (req, res) => {
+  const username = req.params.username;
+  try {
+    const userFound = await user.findOne({ username });
+    if (!userFound) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    await user.deleteOne({ username });
+    res.json({ message: "User Deleted." });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -100,7 +118,7 @@ export const viweUser = async (req, res) => {
 
 //change password
 export const changePassword = async (req, res) => {
-  const userId = parseInt(req.params.userId, 10);
+  const username = req.params.username;
   const { oldPassword, newPassword } = req.body;
   try {
     changePasswordSchema.validateSync(req.body, {
@@ -110,18 +128,23 @@ export const changePassword = async (req, res) => {
     return res.status(400).json({ error: error.errors });
   }
   try {
-    const user = users.find((user) => user.id === userId);
-
-    if (!user) {
+    const userFound = await user.findOne({ username }).select("+password");
+    if (!userFound) {
       return res.status(404).json({ error: "User not found" });
     }
-
-    if (user.password === oldPassword) {
+    const correctPassword = await bcrypt.compare(
+      oldPassword,
+      userFound.password
+    );
+    if (correctPassword) {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-      user.password = hashedPassword;
+      await user.findOneAndUpdate(
+        { username: username },
+        { password: hashedPassword }
+      );
       res.json({ message: "Password Updated." });
     } else {
-      res.json({ message: "Wrong Old Password." });
+      res.json({ message: "Old password is wrong." });
     }
   } catch (error) {
     console.error("Error during profile update:", error);
