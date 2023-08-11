@@ -12,10 +12,10 @@ const router = express.Router();
 
 router.get("/signin", Signin);
 router.post("/signup", SignUp);
-router.get("/viewUser/:username", viweUser);
-router.put("/editprofile/:username", editProfile);
-router.put("/changePassword/:username", changePassword);
+router.get("/viewUser/:id", viweUser);
+router.put("/editprofile/:id", editProfile);
+router.put("/changePassword/:id", changePassword);
 router.get("/allUsers", viewAllUsers);
-router.delete("/deleteUser/:username", deleteUser);
+router.delete("/deleteUser/:id", deleteUser);
 
 export default router;

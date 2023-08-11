@@ -2,19 +2,22 @@ import { object, string } from "yup";
 
 //signin schema
 export const userSchema = object({
-  username: string().required(),
+  email: string().required(),
   password: string().required(),
 });
 
 //signup schema
 export const signUpSchema = object({
-  username: string().required(),
+  email: string().required(),
   password: string().required(),
   firstName: string().required(),
   lastName: string().required(),
+  gender: string().required(),
+  userType: string().required(),
+  phoneNumber: string().required()
 });
 
-//signup schema
+//change password schema
 export const changePasswordSchema = object({
   oldPassword: string().required(),
   newPassword: string().required(),

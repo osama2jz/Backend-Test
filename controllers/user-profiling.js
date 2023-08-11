@@ -8,7 +8,7 @@ import user from "../models/userModel.js";
 
 //signin with monngo
 export const Signin = async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
 
   //validate using yup
   try {
@@ -18,7 +18,7 @@ export const Signin = async (req, res) => {
   } catch (error) {
     return res.status(400).json({ error: error.errors });
   }
-  const found = await user.findOne({ username: username }).select("+password");
+  const found = await user.findOne({ email: email }).select("+password");
   if (!found) {
     return res.status(404).json({ error: "User not found" });
   }
@@ -31,7 +31,7 @@ export const Signin = async (req, res) => {
 
 //signup with monngo
 export const SignUp = async (req, res) => {
-  const { username, password, firstName, lastName } = req.body;
+  const data = req.body;
   try {
     signUpSchema.validateSync(req.body, {
       abortEarly: false,
@@ -39,24 +39,19 @@ export const SignUp = async (req, res) => {
   } catch (error) {
     return res.status(400).json({ error: error.errors });
   }
-  const alreadyExists = await user.findOne({ userName: username });
+  const alreadyExists = await user.findOne({ email: email });
   if (alreadyExists) {
-    return res.status(400).json({ error: "Username already taken" });
+    return res.status(400).json({ error: "email already taken" });
   }
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    await user.create({
-      username,
-      password: hashedPassword,
-      firstName,
-      lastName,
-    });
+    data.password = hashedPassword;
+    await user.create(data);
 
     res.json({ message: "Sign-up successful" });
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(400).json({ message: "Username already exists" });
+      return res.status(400).json({ message: "email already exists" });
     }
     res.status(500).json({ error: "Internal server error" });
   }
@@ -64,13 +59,13 @@ export const SignUp = async (req, res) => {
 
 //editprofile with mongo
 export const editProfile = async (req, res) => {
-  const username = req.params.username;
+  const _id = req.params.id;
   try {
-    const userFound = await user.findOne({ username });
+    const userFound = await user.findOne({ _id });
     if (!userFound) {
       return res.status(404).json({ error: "User not found" });
     }
-    await user.findOneAndUpdate({ username: username }, req.body);
+    await user.findOneAndUpdate({ _id }, req.body);
     res.json({ message: "Profile updated successfully" });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
@@ -79,9 +74,9 @@ export const editProfile = async (req, res) => {
 
 //viewUser with mongo
 export const viweUser = async (req, res) => {
-  const username = req.params.username;
+  const _id = req.params.id;
   try {
-    const userFound = await user.findOne({ username });
+    const userFound = await user.findOne({ _id });
     if (!userFound) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -103,13 +98,13 @@ export const viewAllUsers = async (req, res) => {
 
 //delete user with mongo
 export const deleteUser = async (req, res) => {
-  const username = req.params.username;
+  const _id = req.params.id;
   try {
-    const userFound = await user.findOne({ username });
+    const userFound = await user.findOne({ _id });
     if (!userFound) {
       return res.status(404).json({ error: "User not found" });
     }
-    await user.deleteOne({ username });
+    await user.deleteOne({ _id });
     res.json({ message: "User Deleted." });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
@@ -118,7 +113,7 @@ export const deleteUser = async (req, res) => {
 
 //change password
 export const changePassword = async (req, res) => {
-  const username = req.params.username;
+  const _id = req.params.id;
   const { oldPassword, newPassword } = req.body;
   try {
     changePasswordSchema.validateSync(req.body, {
@@ -128,7 +123,7 @@ export const changePassword = async (req, res) => {
     return res.status(400).json({ error: error.errors });
   }
   try {
-    const userFound = await user.findOne({ username }).select("+password");
+    const userFound = await user.findOne({ _id }).select("+password");
     if (!userFound) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -138,16 +133,12 @@ export const changePassword = async (req, res) => {
     );
     if (correctPassword) {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await user.findOneAndUpdate(
-        { username: username },
-        { password: hashedPassword }
-      );
+      await user.findOneAndUpdate({ _id: _id }, { password: hashedPassword });
       res.json({ message: "Password Updated." });
     } else {
       res.json({ message: "Old password is wrong." });
     }
   } catch (error) {
-    console.error("Error during profile update:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
