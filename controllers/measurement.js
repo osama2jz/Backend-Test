@@ -1,6 +1,5 @@
-import { addMeasurementSchema } from "../yupSchemas/measurement.js";
 import measurement from "../models/measurementModel.js";
-import user from "../models/userModel.js";
+import { addMeasurementSchema } from "../yupSchemas/measurement.js";
 
 //add with monngo
 export const addMeasurement = async (req, res) => {
@@ -15,11 +14,11 @@ export const addMeasurement = async (req, res) => {
 
   try {
     //   console.log("here", data);
-    const userFound = await user.findById(data.userId);
-    if (userFound) {
-      await measurement.create(data);
-      res.json({ message: "Measurement added successfully" });
-    }
+    // const userFound = await measurement.findById(data._id);
+    // if (!userFound) {
+    await measurement.create(data);
+    res.json({ message: "Measurement added successfully" });
+    // }
   } catch (error) {
     // console.log(error)
     res.status(500).json({ error: "Internal server error" });

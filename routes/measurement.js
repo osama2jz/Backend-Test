@@ -1,8 +1,16 @@
 import express from "express";
-import { addMeasurement } from "../controllers/measurement.js";
+import {
+  addMeasurement,
+  deleteMeasurement,
+  editMeasurement,
+  viewAllMeasurements,
+} from "../controllers/measurement.js";
 
 const router = express.Router();
 
-router.post("/add-measurement", addMeasurement);
+router.post("/addMeasurement", addMeasurement);
+router.put("/editMeasurement/:id", editMeasurement);
+router.get("/allMeasurements", viewAllMeasurements);
+router.delete("/deleteMeasurement/:id", deleteMeasurement);
 
 export default router;
